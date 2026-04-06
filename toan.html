@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lì Xì Thông Minh - Dự án Toán 10</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* RESET & BASE STYLES */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #0f172a; color: #f8fafc; padding: 20px; }
+        h1 { text-align: center; color: #34d399; margin-bottom: 30px; text-shadow: 0 0 10px rgba(52, 211, 153, 0.3); }
+
+        .container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 20px; }
+        @media (min-width: 900px) { .container { grid-template-columns: 1fr 1fr; } }
+
+        /* CARD STYLE */
+        .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5); }
+        .card h2 { margin-bottom: 20px; font-size: 1.5rem; display: flex; align-items: center; gap: 10px; }
+
+        /* INPUT CONTROLS */
+        .control-group { margin-bottom: 20px; }
+        .control-group label { display: block; margin-bottom: 8px; color: #94a3b8; font-weight: 500; }
+        input[type="number"], input[type="range"] { width: 100%; background: #0f172a; border: 1px solid #475569; color: white; padding: 10px; border-radius: 6px; outline: none; }
+        input[type="number"]:focus { border-color: #34d399; box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.2); }
+        .range-value { text-align: right; font-weight: bold; margin-top: 5px; }
+
+        /* BANK GRID */
+        .bank-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+        .bank-btn { background: #0f172a; border: 1px solid #475569; color: #cbd5e1; padding: 10px 5px; border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.2s; }
+        .bank-btn:hover { border-color: #64748b; background: #1e293b; }
+        .bank-btn.active { border-color: #34d399; background: rgba(52, 211, 153, 0.1); color: #34d399; box-shadow: 0 0 8px rgba(52, 211, 153, 0.2); }
+        .bank-name { font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 4px; }
+        .bank-rate { font-size: 0.8rem; color: #94a3b8; }
+        .bank-btn.active .bank-rate { color: #34d399; }
+
+        /* COLORS FOR TEXT */
+        .text-green { color: #34d399; } .text-yellow { color: #fbbf24; } .text-purple { color: #c084fc; } .text-cyan { color: #22d3ee; }
+
+        /* MATH FORMULA AREA (NEW CSS) */
+        .formula-box { background: #0f172a; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid; }
+        .formula-box.simple { border-color: #fbbf24; }
+        .formula-box.compound { border-color: #34d399; }
+        
+        .math-text { font-family: 'Courier New', Courier, monospace; font-size: 1.2rem; color: #e2e8f0; margin-bottom: 8px; }
+        
+        /* Chú thích giải nghĩa */
+        .math-explanation { font-size: 0.85rem; color: #94a3b8; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; margin-bottom: 10px; line-height: 1.5; }
+        
+        /* Khung chứa các biến số */
+        .math-legend { font-size: 0.85rem; background: #0f172a; padding: 10px; border-radius: 8px; border: 1px dashed #475569; margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center;}
+        .var-badge { background: #334155; padding: 3px 8px; border-radius: 4px; font-family: monospace; color: #f8fafc; }
+
+        .calc-result { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #334155; font-size: 1.05rem; }
+
+        .highlight-box { background: rgba(192, 132, 252, 0.1); border: 1px solid #c084fc; padding: 15px; border-radius: 8px; margin-top: 20px; }
+
+        /* CHART CONTAINER */
+        .chart-container { grid-column: 1 / -1; background: #1e293b; border-radius: 12px; padding: 20px; height: 400px; border: 1px solid #334155; }
+    </style>
+</head>
+<body>
+
+    <h1>🌱 Lì Xì Thông Minh - Hệ thống Giả lập Đầu tư</h1>
+
+    <div class="container">
+        
+        <div class="card">
+            <h2 class="text-yellow">🎮 Thiết lập Thông số</h2>
+            
+            <div class="control-group">
+                <label>Tiền lì xì ban đầu (VNĐ)</label>
+                <input type="number" id="principal" value="5000000" step="100000">
+            </div>
+
+            <div class="control-group">
+                <label>🏦 Chọn Ngân hàng (Kỳ hạn 12 tháng)</label>
+                <div class="bank-grid" id="bankList"></div>
+            </div>
+
+            <div class="control-group">
+                <label>Lãi suất hàng năm (%) - Tùy chỉnh</label>
+                <input type="range" id="rate" min="1.0" max="15.0" step="0.1" value="5.2">
+                <div class="range-value text-green" id="rateValue">5.2%</div>
+            </div>
+
+            <div class="control-group">
+                <label>Thời gian chờ đợi (Năm)</label>
+                <input type="range" id="years" min="1" max="20" value="5">
+                <div class="range-value text-cyan" id="yearsValue">5 Năm</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 class="text-purple">🌌 Sự diệu kỳ của Toán học</h2>
+            
+            <div class="math-legend">
+                <span class="var-badge text-yellow">A = Tổng tiền</span> 
+                <span class="var-badge text-green">P = Tiền gốc</span> 
+                <span class="var-badge text-cyan">n = Số năm</span> 
+                <span class="var-badge text-purple">r = Lãi suất</span>
+            </div>
+
+            <div class="formula-box simple">
+                <div style="color: #fbbf24; font-weight: bold; margin-bottom: 5px;">Lãi Đơn (Tăng trưởng Tuyến tính)</div>
+                <div class="math-text">A = P(1 + n × r)</div>
+                <div class="math-explanation">
+                    📌 <strong>Bản chất:</strong> Tiền lãi chỉ tính trên số tiền gốc ban đầu. Mỗi năm bạn nhận được một khoản tiền lãi y hệt nhau. (Giống như cất tiền vào lợn đất đều đặn mỗi năm).
+                </div>
+                <div class="calc-result" id="simpleCalc">Đang tính toán...</div>
+            </div>
+
+            <div class="formula-box compound">
+                <div style="color: #34d399; font-weight: bold; margin-bottom: 5px;">Lãi Kép (Sức mạnh Cấp số nhân)</div>
+                <div class="math-text">A = P(1 + r)ⁿ</div>
+                <div class="math-explanation">
+                    📌 <strong>Bản chất:</strong> Tiền lãi sinh ra được cộng dồn vào gốc để tính lãi cho năm tiếp theo (gọi là <em>lãi mẹ đẻ lãi con</em>). Thời gian càng dài, tài sản tăng lên càng nhanh theo đồ thị cong parabol.
+                </div>
+                <div class="calc-result" id="compoundCalc">Đang tính toán...</div>
+            </div>
+
+            <div class="highlight-box">
+                💡 <strong>Góc Cố Vấn:</strong> Nhờ vào việc tái đầu tư tiền lãi, sau <span id="insightYears" class="text-yellow">5</span> năm, phương án lãi kép mang về cho bạn nhiều hơn lãi đơn <strong id="diffAmount" class="text-green">0 VNĐ</strong>.
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h2 class="text-cyan">📈 Hành trình Lì xì (Biểu đồ Tăng trưởng)</h2>
+            <canvas id="growthChart"></canvas>
+        </div>
+
+    </div>
+
+    <script>
+        const banksData = [
+            { id: 'vcb', name: 'Vietcombank', rate: 4.6 },
+            { id: 'bidv', name: 'BIDV', rate: 4.7 },
+            { id: 'agri', name: 'Agribank', rate: 4.7 },
+            { id: 'mb', name: 'MB Bank', rate: 5.1 },
+            { id: 'tcb', name: 'Techcombank', rate: 4.9 },
+            { id: 'cake', name: 'Cake by VP', rate: 5.5 } 
+        ];
+
+        const elPrincipal = document.getElementById('principal');
+        const elRate = document.getElementById('rate');
+        const elYears = document.getElementById('years');
+        const bankListContainer = document.getElementById('bankList');
+        
+        const elRateValue = document.getElementById('rateValue');
+        const elYearsValue = document.getElementById('yearsValue');
+        const elSimpleCalc = document.getElementById('simpleCalc');
+        const elCompoundCalc = document.getElementById('compoundCalc');
+        const elInsightYears = document.getElementById('insightYears');
+        const elDiffAmount = document.getElementById('diffAmount');
+
+        let myChart;
+
+        function renderBanks() {
+            banksData.forEach((bank, index) => {
+                const btn = document.createElement('div');
+                btn.className = `bank-btn ${index === 3 ? 'active' : ''}`;
+                btn.innerHTML = `
+                    <span class="bank-name">${bank.name}</span>
+                    <span class="bank-rate">${bank.rate}% / năm</span>
+                `;
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.bank-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    elRate.value = bank.rate;
+                    updateSystem();
+                });
+                bankListContainer.appendChild(btn);
+            });
+            elRate.value = banksData[3].rate; 
+        }
+
+        const formatMoney = (num) => Math.round(num).toLocaleString('vi-VN');
+
+        function updateSystem() {
+            let P = parseFloat(elPrincipal.value) || 0;
+            let ratePercent = parseFloat(elRate.value);
+            let r = ratePercent / 100;
+            let n = parseInt(elYears.value);
+
+            elRateValue.innerText = `${ratePercent.toFixed(1)}%`;
+            elYearsValue.innerText = `${n} Năm`;
+            elInsightYears.innerText = n;
+
+            const matchingBank = banksData.find(b => b.rate === ratePercent);
+            document.querySelectorAll('.bank-btn').forEach(b => {
+                b.classList.remove('active');
+                if (matchingBank && b.querySelector('.bank-name').innerText === matchingBank.name) {
+                    b.classList.add('active');
+                }
+            });
+
+            let labels = [];
+            let simpleData = [];
+            let compoundData = [];
+
+            for (let i = 0; i <= n; i++) {
+                labels.push(`Năm ${i}`);
+                simpleData.push(P * (1 + i * r)); 
+                compoundData.push(P * Math.pow((1 + r), i)); 
+            }
+
+            let finalSimple = simpleData[n];
+            let finalCompound = compoundData[n];
+            let diff = finalCompound - finalSimple;
+
+            elSimpleCalc.innerHTML = `${formatMoney(P)} × (1 + ${n} × ${ratePercent}%) = <strong class="text-yellow">${formatMoney(finalSimple)} VNĐ</strong>`;
+            elCompoundCalc.innerHTML = `${formatMoney(P)} × (1 + ${ratePercent}%)<sup>${n}</sup> = <strong class="text-green">${formatMoney(finalCompound)} VNĐ</strong>`;
+            elDiffAmount.innerText = `${formatMoney(diff)} VNĐ`;
+
+            updateChart(labels, simpleData, compoundData);
+        }
+
+        function updateChart(labels, simpleData, compoundData) {
+            const ctx = document.getElementById('growthChart').getContext('2d');
+            if (myChart) myChart.destroy();
+
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.borderColor = '#334155';
+
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Lãi Đơn (Tuyệt đối)', data: simpleData, borderColor: '#fbbf24', borderWidth: 2, tension: 0, pointRadius: 4, pointBackgroundColor: '#fbbf24' },
+                        { label: 'Lãi Kép (Tái đầu tư)', data: compoundData, borderColor: '#34d399', backgroundColor: 'rgba(52, 211, 153, 0.1)', borderWidth: 4, fill: true, tension: 0.4, pointRadius: 5, pointBackgroundColor: '#34d399' }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+                    plugins: { tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.9)', callbacks: { label: function(context) { return context.dataset.label + ': ' + formatMoney(context.raw) + ' VNĐ'; } } } },
+                    scales: { y: { ticks: { callback: value => value / 1000000 + 'M' } } }
+                }
+            });
+        }
+
+        elPrincipal.addEventListener('input', updateSystem);
+        elRate.addEventListener('input', updateSystem);
+        elYears.addEventListener('input', updateSystem);
+
+        renderBanks();
+        updateSystem();
+
+    </script>
+</body>
+</html>
